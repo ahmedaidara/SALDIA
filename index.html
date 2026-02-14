@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Club Programmation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #0066cc;
+            --primary-dark: #004999;
+            --secondary: #f0f8ff;
+            --accent: #ff9900;
+            --text: #1a1a1a;
+            --text-light: #4a4a4a;
+            --bg: #ffffff;
+            --bg-alt: #f5f5f5;
+            --border: #e0e0e0;
+            --danger: #ff4444;
+            --success: #00C851;
+        }
+        [data-theme="dark"] {
+            --primary: #0a1929;
+            --secondary: #1a2b3c;
+            --accent: #00ff9d;
+            --text: #e0e0e0;
+            --text-light: #90a4ae;
+            --bg: #121212;
+            --bg-alt: #1e1e1e;
+            --border: #333333;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .welcome-container {
+            max-width: 500px;
+            width: 100%;
+            margin: auto;
+        }
+        .welcome-card {
+            background: var(--bg-alt);
+            border: 2px solid var(--border);
+            border-radius: 30px;
+            padding: 30px 25px;
+            box-shadow: 0 20px 50px rgba(0,102,204,0.1);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .welcome-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--primary);
+            box-shadow: 0 10px 30px rgba(0,102,204,0.3);
+        }
+        .welcome-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .welcome-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        .welcome-subtitle {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 15px 20px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0,102,204,0.2);
+        }
+        .photo-upload {
+            background: var(--bg);
+            border: 2px dashed var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .photo-upload:hover {
+            border-color: var(--primary);
+            background: rgba(0,102,204,0.05);
+        }
+        .photo-upload i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        .photo-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 10px auto;
+            object-fit: cover;
+            border: 3px solid var(--primary);
+            display: none;
+        }
+        .photo-preview.show { display: block; }
+        .btn-primary {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,102,204,0.3);
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-alt);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        #main-interface {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: var(--bg-alt);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 3px solid var(--primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            cursor: pointer;
+        }
+        .header-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .header-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .online-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: var(--success);
+            background: rgba(0,200,81,0.1);
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: var(--bg);
+        }
+        .date-separator {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .date-separator::before,
+        .date-separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+            margin: 0 15px;
+        }
+        .date-separator span {
+            background: var(--bg-alt);
+            color: var(--text-light);
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+        .message-wrapper {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+        }
+        .message-wrapper.own-message {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+        .message-avatar.default {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        .message-content {
+            background: var(--bg-alt);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 12px 15px;
+            position: relative;
+            word-wrap: break-word;
+            max-width: calc(100% - 50px);
+        }
+        .own-message .message-content {
+            background: linear-gradient(135deg, rgba(0,102,204,0.1), var(--bg-alt));
+            border-color: var(--primary);
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .message-sender {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        .message-badge {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-left: auto;
+        }
+        .message-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .message-image {
+            max-width: 250px;
+            max-height: 250px;
+            border-radius: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .message-image:hover {
+            transform: scale(1.05);
+        }
+        .message-video {
+            max-width: 250px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        .message-sticker {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+        .message-actions {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .message-content:hover .message-actions {
+            opacity: 1;
+        }
+        .message-action-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        .message-action-btn.delete-own { background: #ff8c00; }
+        .message-action-btn.delete { background: var(--danger); }
+        .input-area {
+            background: var(--bg-alt);
+            padding: 15px;
+            border-top: 3px solid var(--primary);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-wrapper {
+            flex: 1;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 25px;
+            padding: 5px 15px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .message-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 1rem;
+            padding: 12px 0;
+            max-height: 120px;
+            resize: none;
+            font-family: 'Poppins', sans-serif;
+        }
+        .message-input:focus { outline: none; }
+        .attach-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+        .attach-btn:hover { transform: scale(1.2); }
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--primary);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: var(--bg);
+            border: 3px solid var(--primary);
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .members-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .member-item {
+            background: var(--bg-alt);
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .member-item:hover {
+            transform: translateX(10px);
+            border-color: var(--primary);
+            background: rgba(0,102,204,0.1);
+        }
+        .member-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+        .member-info { flex: 1; }
+        .member-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .member-badge {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+        .member-details {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        .blocked-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--danger);
+            font-weight: 600;
+        }
+        @media (max-width: 768px) {
+            .message-wrapper { max-width: 95%; }
+            .message-image { max-width: 200px; }
+            .member-item:hover { transform: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </div>
+
+    <div id="welcome-screen">
+        <div class="welcome-container">
+            <div class="welcome-card">
+                <div class="welcome-logo">
+                    <img src="https://i.postimg.cc/595Mcwb3/SN-8.png" alt="Logo" onerror="this.src='https://via.placeholder.com/120x120?text=Logo'">
+                </div>
+                <h1 class="welcome-title">CLUB PROGRAMMATION</h1>
+                <p class="welcome-subtitle">L'avenir se code dès aujourd'hui</p>
+                <form id="registration-form">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Prénom</label>
+                        <input type="text" id="firstname" required placeholder="Jean">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-user-tag"></i> Nom</label>
+                        <input type="text" id="lastname" required placeholder="Dupont">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Âge</label>
+                        <input type="number" id="age" required min="10" max="99" placeholder="18">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-code-branch"></i> Niveau</label>
+                        <select id="level" required>
+                            <option value="">Sélectionnez</option>
+                            <option value="Débutant">Débutant</option>
+                            <option value="Intermédiaire">Intermédiaire</option>
+                            <option value="Avancé">Avancé</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-graduation-cap"></i> Classe</label>
+                        <input type="text" id="class" required placeholder="Terminale S / L1">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-image"></i> Photo (optionnel)</label>
+                        <div class="photo-upload" onclick="document.getElementById('profile-photo').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <div>Cliquez pour choisir</div>
+                            <img id="photo-preview" class="photo-preview">
+                        </div>
+                        <input type="file" id="profile-photo" accept="image/*" style="display:none;">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Code</label>
+                        <input type="password" id="access-code" required placeholder="Code d'accès">
+                    </div>
+                    <div id="welcome-error" style="color:var(--danger); text-align:center; margin:10px 0; display:none;"></div>
+                    <button type="submit" class="btn-primary">REJOINDRE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-interface">
+        <div class="chat-header" onclick="showMembersModal()">
+            <div class="header-logo">
+                <img src="https://i.postimg.cc/595Mcwb3/SN-8.png" alt="Logo" onerror="this.src='https://via.placeholder.com/50x50?text=Logo'">
+            </div>
+            <div class="header-text">
+                <div class="header-title">CLUB PROGRAMMATION</div>
+                <div class="header-subtitle">L'avenir se code dès aujourd'hui</div>
+            </div>
+            <div class="online-status">
+                <i class="fas fa-circle"></i>
+                <span id="online-count">0</span> en ligne
+            </div>
+        </div>
+
+        <div class="messages-container" id="messages-container"></div>
+
+        <div class="input-area" id="input-area">
+            <div class="input-wrapper">
+                <textarea class="message-input" id="message-input" placeholder="Message..." rows="1"></textarea>
+                <button class="attach-btn" onclick="showMediaOptions()">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+            </div>
+            <button class="send-btn" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="members-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeMembersModal()">×</button>
+            <h2 style="color:var(--primary); margin-bottom:20px; font-family:'Orbitron';">Membres</h2>
+            <div id="members-list-container" class="members-list"></div>
+        </div>
+    </div>
+
+    <div id="member-details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeMemberDetailsModal()">×</button>
+            <div id="member-details-content"></div>
+        </div>
+    </div>
+
+    <div id="media-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width:400px;">
+            <button class="modal-close" onclick="closeMediaModal()">×</button>
+            <h3 style="color:var(--primary); margin-bottom:20px;">Ajouter</h3>
+            <div style="display:grid; gap:15px;">
+                <button onclick="uploadMedia('image')" class="btn-primary" style="margin:0;">Photo</button>
+                <button onclick="uploadMedia('video')" class="btn-primary" style="margin:0;">Vidéo</button>
+                <button onclick="uploadMedia('sticker')" class="btn-primary" style="margin:0;">Sticker</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_Cj2crubK08ffhx9DQ1KNr2-dR8zkmsQ",
+            authDomain: "clubsaldia.firebaseapp.com",
+            projectId: "clubsaldia",
+            storageBucket: "clubsaldia.firebasestorage.app",
+            messagingSenderId: "965460761858",
+            appId: "1:965460761858:web:fdc57522e506f51050b61b",
+            measurementId: "G-G9N49WYZK9"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let blocked = false;
+        let accessCode = "SALDIA";
+        let admins = [];
+        let presidents = [];
+        let messagesListener = null;
+        let lastDates = {};
+
+        async function checkExistingSession() {
+            const saved = localStorage.getItem('club_user');
+            if (saved) {
+                try {
+                    const userData = JSON.parse(saved);
+                    const userDoc = await db.collection('users').doc(userData.id).get();
+                    if (userDoc.exists) {
+                        currentUser = { id: userDoc.id, ...userDoc.data() };
+                        document.getElementById('welcome-screen').style.display = 'none';
+                        document.getElementById('main-interface').style.display = 'flex';
+                        updateOnlineStatus(true);
+                        listenToConfig();
+                        listenToRoles();
+                        loadMessages();
+                        countOnline();
+                        return true;
+                    }
+                } catch (e) {
+                    localStorage.removeItem('club_user');
+                }
+            }
+            return false;
+        }
+
+        async function uploadToPostImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const res = await fetch('https://api.imgbb.com/1/upload?key=6b7a6a3d7d7a7a7a7a7a7a7a7a7a7a7a', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                return data.data.url;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        document.getElementById('registration-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const firstname = document.getElementById('firstname').value.trim();
+            const lastname = document.getElementById('lastname').value.trim();
+            const age = document.getElementById('age').value;
+            const level = document.getElementById('level').value;
+            const className = document.getElementById('class').value.trim();
+            const code = document.getElementById('access-code').value.trim();
+            const photoFile = document.getElementById('profile-photo').files[0];
+
+            const configDoc = await db.collection('config').doc('settings').get();
+            const currentCode = configDoc.exists ? configDoc.data().accessCode : "SALDIA";
+            if (code !== currentCode) {
+                document.getElementById('welcome-error').style.display = 'block';
+                document.getElementById('welcome-error').textContent = 'Code incorrect';
+                setTimeout(() => document.getElementById('welcome-error').style.display = 'none', 3000);
+                return;
+            }
+
+            let photoUrl = '';
+            if (photoFile) photoUrl = await uploadToPostImage(photoFile);
+
+            const userData = {
+                firstname, lastname, age: parseInt(age), level, class: className,
+                photo: photoUrl, online: true, lastSeen: new Date().toISOString(),
+                joinedAt: new Date().toISOString()
+            };
+            const userRef = await db.collection('users').add(userData);
+            currentUser = { id: userRef.id, ...userData };
+            localStorage.setItem('club_user', JSON.stringify({ id: userRef.id }));
+
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('main-interface').style.display = 'flex';
+            updateOnlineStatus(true);
+            listenToConfig();
+            listenToRoles();
+            loadMessages();
+            countOnline();
+        });
+
+        function listenToConfig() {
+            db.collection('config').doc('settings').onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    accessCode = data.accessCode || "SALDIA";
+                    blocked = data.blocked || false;
+                    if (blocked && currentUser && !admins.includes(currentUser.id) && !presidents.includes(currentUser.id)) {
+                        document.getElementById('input-area').style.display = 'none';
+                    } else {
+                        document.getElementById('input-area').style.display = 'flex';
+                    }
+                }
+            });
+        }
+
+        function listenToRoles() {
+            db.collection('roles').onSnapshot((snapshot) => {
+                admins = []; presidents = [];
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.role === 'admin') admins.push(data.userId);
+                    if (data.role === 'presidente') presidents.push(data.userId);
+                });
+            });
+        }
+
+        function loadMessages() {
+            if (messagesListener) messagesListener();
+            messagesListener = db.collection('messages').orderBy('timestamp', 'asc').onSnapshot((snapshot) => {
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '';
+                let lastDate = '';
+                snapshot.docs.forEach(doc => {
+                    const msg = doc.data();
+                    const msgDate = new Date(msg.timestamp).toLocaleDateString('fr-FR', { year:'numeric', month:'long', day:'numeric' });
+                    if (msgDate !== lastDate) {
+                        const sep = document.createElement('div');
+                        sep.className = 'date-separator';
+                        sep.innerHTML = `<span>${msgDate}</span>`;
+                        container.appendChild(sep);
+                        lastDate = msgDate;
+                    }
+                    displayMessage(msg, doc.id);
+                });
+                container.scrollTop = container.scrollHeight;
+                if (Notification.permission === 'granted' && document.hidden) {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added' && change.doc.data().userId !== currentUser?.id) {
+                            new Notification('Nouveau message', { body: change.doc.data().userName + ' a envoyé un message' });
+                        }
+                    });
+                }
+            });
+        }
+
+        function displayMessage(msg, msgId) {
+            const container = document.getElementById('messages-container');
+            const isOwn = currentUser && msg.userId === currentUser.id;
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${isOwn ? 'own-message' : ''}`;
+
+            const avatar = document.createElement('div');
+            if (msg.userPhoto) {
+                avatar.className = 'message-avatar';
+                avatar.innerHTML = `<img src="${msg.userPhoto}" class="message-avatar">`;
+            } else {
+                avatar.className = 'message-avatar default';
+                avatar.innerHTML = '<i class="fas fa-user"></i>';
+            }
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const badges = [];
+            if (admins.includes(msg.userId)) badges.push('ADMIN');
+            if (presidents.includes(msg.userId)) badges.push('PRÉSIDENTE');
+
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.innerHTML = `
+                <span class="message-sender">${msg.userName}</span>
+                ${badges.map(b => `<span class="message-badge">${b}</span>`).join('')}
+                <span class="message-time">${new Date(msg.timestamp).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
+            `;
+
+            const text = document.createElement('div');
+            text.className = 'message-text';
+            if (msg.type === 'text') text.textContent = msg.text;
+            else if (msg.type === 'image') text.innerHTML = `<img src="${msg.url}" class="message-image" onclick="window.open('${msg.url}')">`;
+            else if (msg.type === 'video') text.innerHTML = `<video src="${msg.url}" controls class="message-video"></video>`;
+            else if (msg.type === 'sticker') text.innerHTML = `<img src="${msg.url}" class="message-sticker">`;
+
+            if (isOwn || admins.includes(currentUser.id) || presidents.includes(currentUser.id)) {
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+                actions.innerHTML = `<button class="message-action-btn ${isOwn ? 'delete-own' : 'delete'}" onclick="deleteMessage('${msgId}')"><i class="fas fa-trash"></i></button>`;
+                content.appendChild(actions);
+            }
+
+            content.appendChild(header);
+            content.appendChild(text);
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(content);
+            container.appendChild(wrapper);
+        }
+
+        async function deleteMessage(msgId) {
+            if (!currentUser) return;
+            try { await db.collection('messages').doc(msgId).delete(); }
+            catch (e) { console.error(e); }
+        }
+
+        async function sendMessage(type = 'text', content = null) {
+            if (blocked && !admins.includes(currentUser.id) && !presidents.includes(currentUser.id)) {
+                alert('Messages bloqués');
+                return;
+            }
+            const input = document.getElementById('message-input');
+            const text = content || input.value.trim();
+            if (!text && type === 'text') return;
+
+            const msgData = {
+                userId: currentUser.id,
+                userName: `${currentUser.firstname} ${currentUser.lastname}`,
+                userPhoto: currentUser.photo || '',
+                type: type,
+                timestamp: new Date().toISOString()
+            };
+            if (type === 'text') msgData.text = text;
+            else if (content) msgData.url = content;
+
+            await db.collection('messages').add(msgData);
+            if (type === 'text') input.value = '';
+        }
+
+        function uploadMedia(type) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = type === 'video' ? 'video/*' : 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                closeMediaModal();
+                const url = await uploadToPostImage(file);
+                if (url) sendMessage(type, url);
+            };
+            input.click();
+        }
+
+        function showMediaOptions() { document.getElementById('media-modal').style.display = 'flex'; }
+        function closeMediaModal() { document.getElementById('media-modal').style.display = 'none'; }
+
+        async function showMembersModal() {
+            const modal = document.getElementById('members-modal');
+            const container = document.getElementById('members-list-container');
+            const snapshot = await db.collection('users').get();
+            container.innerHTML = '';
+            snapshot.docs.forEach(doc => {
+                const user = doc.data();
+                const badges = [];
+                if (admins.includes(doc.id)) badges.push('ADMIN');
+                if (presidents.includes(doc.id)) badges.push('PRÉSIDENTE');
+                const div = document.createElement('div');
+                div.className = 'member-item';
+                div.onclick = () => showMemberDetails(doc.id, user);
+                div.innerHTML = `
+                    <img src="${user.photo || ''}" class="member-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="member-avatar default" style="display:${user.photo?'none':'flex'};"><i class="fas fa-user"></i></div>
+                    <div class="member-info">
+                        <div class="member-name">${user.firstname} ${user.lastname} ${badges.map(b => `<span class="member-badge">${b}</span>`).join('')}</div>
+                        <div class="member-details">${user.level} • ${user.class}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            modal.style.display = 'flex';
+        }
+
+        function closeMembersModal() { document.getElementById('members-modal').style.display = 'none'; }
+
+        function showMemberDetails(userId, user) {
+            const modal = document.getElementById('member-details-modal');
+            const container = document.getElementById('member-details-content');
+            const badges = [];
+            if (admins.includes(userId)) badges.push('ADMIN');
+            if (presidents.includes(userId)) badges.push('PRÉSIDENTE');
+            container.innerHTML = `
+                <div style="text-align:center;">
+                    <div style="width:120px; height:120px; margin:0 auto 20px;">
+                        <img src="${user.photo||''}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid var(--primary);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="width:100%; height:100%; border-radius:50%; background:var(--primary); display:${user.photo?'none':'flex'}; align-items:center; justify-content:center; border:3px solid var(--primary);"><i class="fas fa-user" style="font-size:3rem; color:white;"></i></div>
+                    </div>
+                    <h2 style="color:var(--primary);">${user.firstname} ${user.lastname}</h2>
+                    ${badges.map(b => `<span style="background:var(--accent); color:white; padding:5px 15px; border-radius:20px; display:inline-block; margin-bottom:15px;">${b}</span>`).join('')}
+                    <div style="display:grid; gap:15px; text-align:left; margin-top:20px;">
+                        <div><i class="fas fa-calendar" style="color:var(--primary); width:30px;"></i> ${user.age} ans</div>
+                        <div><i class="fas fa-code-branch" style="color:var(--primary); width:30px;"></i> ${user.level}</div>
+                        <div><i class="fas fa-graduation-cap" style="color:var(--primary); width:30px;"></i> ${user.class}</div>
+                        <div><i class="fas fa-clock" style="color:var(--primary); width:30px;"></i> Inscrit le ${new Date(user.joinedAt).toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        function closeMemberDetailsModal() { document.getElementById('member-details-modal').style.display = 'none'; }
+
+        async function updateOnlineStatus(online) {
+            if (!currentUser) return;
+            try { await db.collection('users').doc(currentUser.id).update({ online, lastSeen: new Date().toISOString() }); }
+            catch (e) { console.error(e); }
+        }
+
+        function countOnline() {
+            db.collection('users').where('online', '==', true).onSnapshot((snapshot) => {
+                document.getElementById('online-count').textContent = snapshot.size;
+            });
+        }
+
+        document.getElementById('message-input').addEventListener('input', function() {
+            this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';
+        });
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+        document.getElementById('profile-photo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('photo-preview').src = e.target.result;
+                    document.getElementById('photo-preview').classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            if (current === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+                document.querySelector('.theme-toggle i').className = 'fas fa-moon';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+            }
+        }
+
+        window.addEventListener('beforeunload', () => updateOnlineStatus(false));
+
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+
+        checkExistingSession().then(exists => {
+            if (!exists) {
+                db.collection('config').doc('settings').get().then(doc => {
+                    if (!doc.exists) {
+                        db.collection('config').doc('settings').set({ accessCode: "SALDIA", blocked: false });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
