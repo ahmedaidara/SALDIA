@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Administration - Club Programmation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0a1929;
+            --secondary: #1a2b3c;
+            --accent: #00ff9d;
+            --accent-dark: #00cc7d;
+            --text: #e0e0e0;
+            --text-muted: #90a4ae;
+            --danger: #ff4757;
+            --success: #00d68f;
+            --warning: #ffa502;
+            --glass-bg: rgba(10, 25, 41, 0.9);
+            --glass-border: rgba(0, 255, 157, 0.2);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, #0b2a3e 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Écran de connexion */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 50px rgba(0, 255, 157, 0.1);
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-logo i {
+            font-size: 3rem;
+            color: var(--primary);
+        }
+
+        .login-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 30px;
+        }
+
+        .admin-password {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--glass-border);
+            border-radius: 15px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .admin-password:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            border-radius: 15px;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 255, 157, 0.3);
+        }
+
+        /* Interface principale */
+        #admin-interface {
+            display: none;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .admin-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            background: var(--success);
+            color: var(--primary);
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .admin-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px;
+        }
+
+        .card-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Code d'accès */
+        .code-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .current-code {
+            font-size: 2rem;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent);
+            letter-spacing: 5px;
+        }
+
+        .code-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .code-input {
+            flex: 1;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--glass-border);
+            border-radius: 10px;
+            color: white;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn-small {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            border-radius: 10px;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Switch bloqué */
+        .blocked-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--danger);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 33px;
+        }
+
+        /* Liste des membres */
+        .members-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .member-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .member-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .member-name {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .member-details {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .member-roles {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .role-badge {
+            background: var(--accent);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .role-badge.admin {
+            background: var(--danger);
+            color: white;
+        }
+
+        .role-badge.presidente {
+            background: var(--warning);
+            color: var(--primary);
+        }
+
+        .role-badge.remove {
+            background: var(--danger);
+            color: white;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 5px;
+        }
+
+        .exclude-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* Historique */
+        .history-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .history-time {
+            color: var(--accent);
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .member-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .member-roles {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ÉCRAN DE CONNEXION -->
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-logo">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h2 class="login-title">ADMINISTRATION</h2>
+                <input type="password" id="admin-password" class="admin-password" placeholder="Mot de passe admin">
+                <button class="login-btn" onclick="adminLogin()">
+                    <i class="fas fa-arrow-right"></i> ACCÉDER
+                </button>
+                <div id="login-error" style="color: var(--danger); text-align: center; margin-top: 15px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTERFACE ADMIN -->
+    <div id="admin-interface">
+        <div class="admin-header">
+            <div class="admin-title">
+                <i class="fas fa-crown"></i> PANEL ADMIN
+            </div>
+            <div class="status-badge">
+                <i class="fas fa-circle"></i> Connecté
+            </div>
+        </div>
+
+        <div class="admin-grid">
+            <!-- Carte Configuration -->
+            <div class="admin-card">
+                <div class="card-title">
+                    <i class="fas fa-key"></i> Code d'accès
+                </div>
+                <div class="code-display">
+                    <div style="color: var(--text-muted); margin-bottom: 10px;">Code actuel</div>
+                    <div class="current-code" id="current-code">SALDIA</div>
+                </div>
+                <div class="code-input-group">
+                    <input type="text" id="new-code" class="code-input" placeholder="Nouveau code" maxlength="20">
+                    <button class="btn-small" onclick="changeAccessCode()">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Carte Contrôle -->
+            <div class="admin-card">
+                <div class="card-title">
+                    <i class="fas fa-ban"></i> Contrôle des messages
+                </div>
+                <div class="blocked-toggle">
+                    <span><i class="fas fa-lock"></i> Bloquer les messages</span>
+                    <div id="block-toggle" class="toggle-switch" onclick="toggleBlocked()"></div>
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Si activé, seuls les admins peuvent envoyer des messages
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des membres avec rôles -->
+        <div class="admin-card">
+            <div class="card-title">
+                <i class="fas fa-users-cog"></i> Gestion des rôles
+            </div>
+            <div id="members-list" class="members-list"></div>
+        </div>
+
+        <!-- Historique des actions -->
+        <div class="admin-card">
+            <div class="card-title">
+                <i class="fas fa-history"></i> Historique des actions
+            </div>
+            <div id="history-list" class="members-list" style="max-height: 300px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_Cj2crubK08ffhx9DQ1KNr2-dR8zkmsQ",
+            authDomain: "clubsaldia.firebaseapp.com",
+            projectId: "clubsaldia",
+            storageBucket: "clubsaldia.firebasestorage.app",
+            messagingSenderId: "965460761858",
+            appId: "1:965460761858:web:fdc57522e506f51050b61b",
+            measurementId: "G-G9N49WYZK9"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const ADMIN_PASSWORD = "admin123"; // Mot de passe pour accéder au panel admin
+
+        // Connexion admin
+        function adminLogin() {
+            const password = document.getElementById('admin-password').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-interface').style.display = 'block';
+                loadConfig();
+                loadMembers();
+                loadHistory();
+            } else {
+                const error = document.getElementById('login-error');
+                error.textContent = 'Mot de passe incorrect';
+                error.style.display = 'block';
+                setTimeout(() => {
+                    error.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Charger la configuration
+        async function loadConfig() {
+            try {
+                const doc = await db.collection('config').doc('settings').get();
+                
+                if (!doc.exists) {
+                    // Créer la config par défaut
+                    await db.collection('config').doc('settings').set({
+                        accessCode: "SALDIA",
+                        blocked: false
+                    });
+                    document.getElementById('current-code').textContent = "SALDIA";
+                    document.getElementById('block-toggle').classList.remove('active');
+                } else {
+                    const data = doc.data();
+                    document.getElementById('current-code').textContent = data.accessCode || "SALDIA";
+                    
+                    if (data.blocked) {
+                        document.getElementById('block-toggle').classList.add('active');
+                    } else {
+                        document.getElementById('block-toggle').classList.remove('active');
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur chargement config:', error);
+            }
+        }
+
+        // Changer le code d'accès
+        async function changeAccessCode() {
+            const newCode = document.getElementById('new-code').value.trim();
+            
+            if (!newCode) return;
+
+            try {
+                await db.collection('config').doc('settings').update({
+                    accessCode: newCode
+                });
+
+                document.getElementById('current-code').textContent = newCode;
+                document.getElementById('new-code').value = '';
+
+                // Ajouter à l'historique
+                await addHistory('Changement code accès', `Nouveau code: ${newCode}`);
+
+            } catch (error) {
+                console.error('Erreur changement code:', error);
+            }
+        }
+
+        // Basculer le blocage des messages
+        async function toggleBlocked() {
+            const toggle = document.getElementById('block-toggle');
+            const newState = !toggle.classList.contains('active');
+
+            try {
+                await db.collection('config').doc('settings').update({
+                    blocked: newState
+                });
+
+                toggle.classList.toggle('active');
+
+                // Ajouter à l'historique
+                await addHistory('Blocage messages', newState ? 'Activé' : 'Désactivé');
+
+            } catch (error) {
+                console.error('Erreur changement blocage:', error);
+            }
+        }
+
+        // Charger les membres
+        async function loadMembers() {
+            try {
+                const snapshot = await db.collection('users').get();
+                const container = document.getElementById('members-list');
+                
+                // Récupérer les rôles existants
+                const rolesSnapshot = await db.collection('roles').get();
+                const roles = {};
+                rolesSnapshot.docs.forEach(doc => {
+                    roles[doc.data().userId] = doc.data().role;
+                });
+
+                container.innerHTML = '';
+
+                snapshot.docs.forEach(doc => {
+                    const user = doc.data();
+                    const userId = doc.id;
+                    const userRole = roles[userId] || '';
+
+                    const memberDiv = document.createElement('div');
+                    memberDiv.className = 'member-item';
+
+                    memberDiv.innerHTML = `
+                        <div class="member-info">
+                            <div class="member-name">
+                                ${user.firstname} ${user.lastname}
+                                ${userRole ? `<span style="color: var(--accent); margin-left:10px;">(${userRole})</span>` : ''}
+                            </div>
+                            <div class="member-details">
+                                ${user.age} ans • ${user.level} • ${user.class}
+                            </div>
+                        </div>
+                        <div class="member-roles">
+                            <div class="role-selector">
+                                <button class="role-badge ${userRole === 'admin' ? 'admin' : ''}" onclick="setRole('${userId}', 'admin')">
+                                    <i class="fas fa-crown"></i> Admin
+                                </button>
+                                <button class="role-badge ${userRole === 'presidente' ? 'presidente' : ''}" onclick="setRole('${userId}', 'presidente')">
+                                    <i class="fas fa-star"></i> Présidente
+                                </button>
+                                ${userRole ? `
+                                    <button class="role-badge remove" onclick="removeRole('${userId}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <button class="exclude-btn" onclick="excludeMember('${userId}', '${user.firstname} ${user.lastname}')">
+                                <i class="fas fa-user-slash"></i> Exclure
+                            </button>
+                        </div>
+                    `;
+
+                    container.appendChild(memberDiv);
+                });
+
+            } catch (error) {
+                console.error('Erreur chargement membres:', error);
+            }
+        }
+
+        // Définir un rôle
+        async function setRole(userId, role) {
+            try {
+                // Vérifier si l'utilisateur a déjà un rôle
+                const snapshot = await db.collection('roles').where('userId', '==', userId).get();
+                
+                if (!snapshot.empty) {
+                    // Mettre à jour le rôle existant
+                    await snapshot.docs[0].ref.update({ role: role });
+                } else {
+                    // Créer un nouveau rôle
+                    await db.collection('roles').add({
+                        userId: userId,
+                        role: role,
+                        assignedAt: new Date().toISOString()
+                    });
+                }
+
+                // Ajouter à l'historique
+                await addHistory('Attribution rôle', `Utilisateur ${userId} → ${role}`);
+
+                // Recharger la liste
+                loadMembers();
+
+            } catch (error) {
+                console.error('Erreur attribution rôle:', error);
+            }
+        }
+
+        // Supprimer un rôle
+        async function removeRole(userId) {
+            try {
+                const snapshot = await db.collection('roles').where('userId', '==', userId).get();
+                
+                const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+                await Promise.all(deletePromises);
+
+                // Ajouter à l'historique
+                await addHistory('Suppression rôle', `Utilisateur ${userId}`);
+
+                // Recharger la liste
+                loadMembers();
+
+            } catch (error) {
+                console.error('Erreur suppression rôle:', error);
+            }
+        }
+
+        // Exclure un membre (supprimer complètement)
+        async function excludeMember(userId, userName) {
+            if (!confirm(`Êtes-vous sûr de vouloir exclure ${userName} ? Cette action est irréversible.`)) {
+                return;
+            }
+
+            try {
+                // Supprimer l'utilisateur
+                await db.collection('users').doc(userId).delete();
+
+                // Supprimer ses messages
+                const messagesSnapshot = await db.collection('messages').where('userId', '==', userId).get();
+                const deletePromises = messagesSnapshot.docs.map(doc => doc.ref.delete());
+                await Promise.all(deletePromises);
+
+                // Supprimer ses rôles
+                const rolesSnapshot = await db.collection('roles').where('userId', '==', userId).get();
+                const deleteRolesPromises = rolesSnapshot.docs.map(doc => doc.ref.delete());
+                await Promise.all(deleteRolesPromises);
+
+                // Ajouter à l'historique
+                await addHistory('Exclusion membre', `${userName} (${userId})`);
+
+                // Recharger la liste
+                loadMembers();
+
+            } catch (error) {
+                console.error('Erreur exclusion membre:', error);
+            }
+        }
+
+        // Ajouter à l'historique
+        async function addHistory(action, details) {
+            try {
+                await db.collection('history').add({
+                    action: action,
+                    details: details,
+                    timestamp: new Date().toISOString(),
+                    admin: "Administrateur"
+                });
+                
+                // Recharger l'historique
+                loadHistory();
+                
+            } catch (error) {
+                console.error('Erreur ajout historique:', error);
+            }
+        }
+
+        // Charger l'historique
+        async function loadHistory() {
+            try {
+                const snapshot = await db.collection('history')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
+
+                const container = document.getElementById('history-list');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Aucune action enregistrée</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    const time = new Date(data.timestamp).toLocaleString('fr-FR');
+
+                    const historyDiv = document.createElement('div');
+                    historyDiv.className = 'history-item';
+                    historyDiv.innerHTML = `
+                        <div class="history-time">${time}</div>
+                        <div style="font-weight: 600; color: var(--accent);">${data.action}</div>
+                        <div style="font-size: 0.85rem;">${data.details}</div>
+                    `;
+
+                    container.appendChild(historyDiv);
+                });
+
+            } catch (error) {
+                console.error('Erreur chargement historique:', error);
+            }
+        }
+
+        // Écouter les changements en temps réel
+        function listenToChanges() {
+            db.collection('config').doc('settings').onSnapshot(() => {
+                loadConfig();
+            });
+
+            db.collection('users').onSnapshot(() => {
+                loadMembers();
+            });
+
+            db.collection('roles').onSnapshot(() => {
+                loadMembers();
+            });
+
+            db.collection('history').onSnapshot(() => {
+                loadHistory();
+            });
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            listenToChanges();
+        });
+    </script>
+</body>
+</html>
